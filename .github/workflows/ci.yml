@@ -14,7 +14,13 @@ jobs:
       run:
         working-directory: backend
     steps:
+      - name: Clean workspace
+        run: if (Test-Path "${{ github.workspace }}") { Remove-Item "${{ github.workspace }}\*" -Recurse -Force -ErrorAction SilentlyContinue }
+        working-directory: .
+
       - uses: actions/checkout@v4
+        with:
+          clean: false
 
       - name: Mark workspace as safe directory
         run: git config --global --add safe.directory "${{ github.workspace }}"
@@ -35,7 +41,13 @@ jobs:
       run:
         working-directory: frontend
     steps:
+      - name: Clean workspace
+        run: if (Test-Path "${{ github.workspace }}") { Remove-Item "${{ github.workspace }}\*" -Recurse -Force -ErrorAction SilentlyContinue }
+        working-directory: .
+
       - uses: actions/checkout@v4
+        with:
+          clean: false
 
       - name: Mark workspace as safe directory
         run: git config --global --add safe.directory "${{ github.workspace }}"
@@ -56,7 +68,12 @@ jobs:
     runs-on: self-hosted
     needs: [backend-test, frontend-test]
     steps:
+      - name: Clean workspace
+        run: if (Test-Path "${{ github.workspace }}") { Remove-Item "${{ github.workspace }}\*" -Recurse -Force -ErrorAction SilentlyContinue }
+
       - uses: actions/checkout@v4
+        with:
+          clean: false
 
       - name: Mark workspace as safe directory
         run: git config --global --add safe.directory "${{ github.workspace }}"
@@ -84,7 +101,12 @@ jobs:
     runs-on: self-hosted
     needs: [docker-build]
     steps:
+      - name: Clean workspace
+        run: if (Test-Path "${{ github.workspace }}") { Remove-Item "${{ github.workspace }}\*" -Recurse -Force -ErrorAction SilentlyContinue }
+
       - uses: actions/checkout@v4
+        with:
+          clean: false
 
       - name: Mark workspace as safe directory
         run: git config --global --add safe.directory "${{ github.workspace }}"

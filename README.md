@@ -611,12 +611,30 @@ The GitHub Actions workflow (`.github/workflows/ci.yml`) triggers on **push** an
 | Jest `Cannot find module @testing-library/dom` | Add `@testing-library/dom@^10.4.0` to `devDependencies`   |
 | Jest `Cannot use import statement` (axios) | Add `transformIgnorePatterns: ["node_modules/(?!axios)/"]` to Jest config in `package.json` |
 
+### CI/CD Pipeline Issues (Windows / PowerShell)
+
+| Problem                                | Solution                                                         |
+|----------------------------------------|------------------------------------------------------------------|
+| **`NativeCommandError` on `docker build` / `docker-compose up`** | Docker writes progress to stderr. PowerShell treats stderr as error. Fix: set `$ErrorActionPreference = 'SilentlyContinue'` before the command and check `$LASTEXITCODE` manually. See `ci.yml` for examples |
+| **`grep` not found on Windows runner** | Windows has no `grep`. Replace with `Select-String`, e.g. `docker images \| Select-String "student-app"` |
+| **`$GITHUB_WORKSPACE` empty on Windows** | Use `${{ github.workspace }}` in workflow YAML — it's a GitHub expression resolved before the shell runs, not a shell variable |
+| **`pytest-asyncio` deprecation warning in Selenium tests** | Add `asyncio_default_fixture_loop_scope = function` to `selenium/pytest.ini`. This is caused by `pytest-asyncio` being installed system-wide from backend dependencies |
+
+### Selenium / E2E Issues
+
+| Problem                                | Solution                                                         |
+|----------------------------------------|------------------------------------------------------------------|
+| **Chrome not visible during E2E tests** | The runner must run **interactively** (via `run.cmd`), not as a Windows service. Services run in Session 0 with no desktop. Stop the service → start `run.cmd` manually |
+| **How to switch runner to interactive mode** | `Stop-Service "actions.runner.<name>"` (elevated) → `cd <runner-dir>` → `.\run.cmd` |
+| **How to switch back to service mode** | Close the `run.cmd` terminal → `Start-Service "actions.runner.<name>"` (elevated) |
+| **E2E tests fail — app not running** | The `e2e.yml` workflow builds and starts services automatically. If running locally: `docker-compose up -d` first, then `pytest selenium/ -v` |
+| **E2E tests timeout waiting for backend** | Check Docker logs: `docker-compose logs backend`. Ensure backend healthcheck passes: `Invoke-WebRequest http://localhost:8000/api/health` |
+
 ### Self-Hosted Runner Issues
 
 | Problem                                | Solution                                                         |
 |----------------------------------------|------------------------------------------------------------------|
 | **Git dubious ownership** — `detected dubious ownership in repository` | Run `git config --system --add safe.directory '*'` in an elevated terminal. Also create `C:\ProgramData\Git\config` with `[safe]\n\tdirectory = *` |
-| **`$GITHUB_WORKSPACE` empty on Windows** | Use `${{ github.workspace }}` in workflow YAML — it's a GitHub expression resolved before the shell runs |
 | **Runner shows offline on GitHub** | Check if the runner service is running: `Get-Service actions.runner.*`. Start with: `Start-Service <service-name>` or manually with `run.cmd` |
 | **Runner registered to wrong repo** | Check `.runner` file: `Get-Content <runner-dir>\.runner -Raw`. Re-register with `config.cmd remove` then `config.cmd --url <repo-url> --token <token>` |
 | **Multiple repos need a runner** | Option 1: Register runner at org level. Option 2: Create separate runner folders per repo |
@@ -649,6 +667,19 @@ Get-Process Runner.Listener -ErrorAction SilentlyContinue
 # Start runner service (elevated)
 Start-Service "actions.runner.christopher-pb-StudentAppRepo.YY282381"
 
+# Stop runner service and switch to interactive mode (visible browser)
+Stop-Service "actions.runner.christopher-pb-StudentAppRepo.YY282381"
+cd D:\KJC\action-runner-2\actions-runner-win-x64-2.332.0
+.\run.cmd
+
 # View runner logs
 Get-ChildItem <runner-dir>\_diag\*.log | Sort-Object LastWriteTime -Descending | Select-Object -First 5
+
+# Check if app is healthy
+Invoke-WebRequest -Uri http://localhost:8000/api/health -UseBasicParsing
+Invoke-WebRequest -Uri http://localhost:3000 -UseBasicParsing
+
+# View Docker Compose service status
+docker-compose ps
+docker-compose logs --tail=20 backend
 ```

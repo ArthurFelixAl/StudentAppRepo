@@ -7,7 +7,15 @@ jobs:
   e2e-tests:
     runs-on: self-hosted
     steps:
+      - name: Clean workspace before checkout
+        run: |
+          if (Test-Path "${{ github.workspace }}") {
+            Remove-Item -Path "${{ github.workspace }}\*" -Recurse -Force -ErrorAction SilentlyContinue
+          }
+
       - uses: actions/checkout@v4
+        with:
+          clean: false
 
       - name: Mark workspace as safe directory
         run: git config --global --add safe.directory "${{ github.workspace }}"
