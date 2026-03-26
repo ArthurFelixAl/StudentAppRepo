@@ -191,7 +191,7 @@ Navigate to **http://localhost:3000** in your browser.
 2. Enter a username and password
 3. You'll be redirected to the Student List page
 
-### 5. Stop all services
+### 5. Stop all services in docker
 ```bash
 docker-compose down
 ```
